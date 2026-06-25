@@ -1,0 +1,794 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeepSeek Quiz Generator</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #000000;
+    --bg-card: #0a0a0f;
+    --bg-card-hover: #0f0f18;
+    --bg-input: #050508;
+    --border: #00f0ff33;
+    --border-focus: #00f0ff;
+    --text: #d0d0d8;
+    --text-muted: #6a6a80;
+    --text-dim: #3a3a50;
+    --primary: #00f0ff;
+    --primary-hover: #00ff66;
+    --success: #00ff66;
+    --danger: #ff007f;
+    --warning: #ffee00;
+    --accent-amber: #ffee00;
+    --accent-pink: #ff007f;
+    --accent-blue: #00f0ff;
+    --accent-emerald: #00ff66;
+    --radius: 2px;
+    --glow-cyan: 0 0 8px #00f0ff44, 0 0 20px #00f0ff22;
+    --glow-pink: 0 0 8px #ff007f44, 0 0 20px #ff007f22;
+    --glow-green: 0 0 8px #00ff6644, 0 0 20px #00ff6622;
+  }
+
+  body {
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", "JetBrains Mono",
+      "PingFang SC", "Microsoft YaHei", monospace;
+    background: #000000;
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+    background-image:
+      linear-gradient(rgba(0,240,255,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,240,255,.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .container { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem; width: 100%; }
+
+  /* ── Header ────────────────────────────────── */
+  .header { text-align: center; margin-bottom: 2rem; }
+  .header h1 {
+    font-size: 1.75rem; font-weight: 700;
+    background: linear-gradient(135deg, #00f0ff, #ff007f, #00ff66);
+    background-size: 200% 200%;
+    animation: gradientShift 4s ease infinite;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    filter: drop-shadow(0 0 12px #00f0ff55);
+  }
+  @keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+  .header p { color: var(--text-muted); margin-top: 0.25rem; font-size: 0.85rem; letter-spacing: 0.05em; }
+
+  /* ── Card ───────────────────────────────────── */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.75rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #00f0ff, transparent);
+  }
+
+  /* ── Form ────────────────────────────────────── */
+  .form-group { margin-bottom: 1.25rem; }
+  .form-group:last-child { margin-bottom: 0; }
+  label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .form-hint { font-size: 0.75rem; color: var(--text-dim); font-weight: 400; margin-left: 0.25rem; text-transform: none; letter-spacing: 0; }
+
+  input[type="file"],
+  input[type="number"],
+  input[type="text"],
+  select,
+  textarea {
+    width: 100%;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+    font-family: inherit;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    background: var(--bg-input);
+    color: var(--text);
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: var(--glow-cyan);
+  }
+  select option { background: var(--bg-card); color: var(--text); }
+
+  .file-area {
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    background: var(--bg-input);
+  }
+  .file-area:hover, .file-area.dragover {
+    border-color: var(--primary);
+    background: rgba(0,240,255,.03);
+    box-shadow: var(--glow-cyan);
+  }
+  .file-area input { display: none; }
+  .file-area .file-placeholder { color: var(--text-dim); font-size: 0.85rem; }
+  .file-area .file-name { color: var(--primary); font-weight: 600; word-break: break-all; }
+
+  .row { display: flex; gap: 1rem; }
+  .row > * { flex: 1; }
+
+  /* ── Buttons ────────────────────────────────── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.65rem 1.5rem;
+    border: 1px solid var(--primary);
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: transparent;
+    color: var(--primary);
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary {
+    background: transparent;
+    border-color: var(--primary);
+    color: var(--primary);
+    width: 100%;
+    text-shadow: 0 0 6px #00f0ff66;
+  }
+  .btn-primary:hover {
+    background: #00f0ff15;
+    box-shadow: var(--glow-cyan);
+    text-shadow: 0 0 10px #00f0ff;
+  }
+  .btn-primary:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    box-shadow: none;
+    text-shadow: none;
+  }
+  .btn-outline {
+    background: transparent;
+    color: var(--primary);
+    border: 1px solid var(--border);
+    font-size: 0.75rem;
+    padding: 0.4rem 0.75rem;
+  }
+  .btn-outline:hover { border-color: var(--primary); box-shadow: var(--glow-cyan); }
+
+  .btn-row { display: flex; gap: 0.75rem; margin-top: 1rem; }
+
+  /* ── Spinner ────────────────────────────────── */
+  .spinner {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border: 2px solid #00f0ff33;
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+    filter: drop-shadow(0 0 3px var(--primary));
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Status ─────────────────────────────────── */
+  .status { margin-top: 1rem; font-size: 0.85rem; font-family: inherit; }
+  .status.error { color: var(--danger); text-shadow: 0 0 6px #ff007f44; }
+  .status.success { color: var(--success); text-shadow: 0 0 6px #00ff6644; }
+
+  /* ── Result ─────────────────────────────────── */
+  .result-hidden { display: none; }
+  .result-visible { display: block; }
+
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+  .meta-item {
+    background: var(--bg-input);
+    border-radius: var(--radius);
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+  }
+  .meta-label { font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; }
+  .meta-value { font-weight: 600; font-size: 0.9rem; margin-top: 0.15rem; color: var(--primary); }
+
+  .question-card {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    transition: border-color 0.2s;
+  }
+  .question-card:hover { border-color: #00f0ff55; }
+  .q-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .q-id { font-weight: 700; color: var(--primary); font-size: 0.8rem; text-shadow: 0 0 6px #00f0ff44; }
+  .q-badge {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--radius);
+    font-weight: 600;
+    border: 1px solid;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .badge-single { border-color: #00f0ff44; color: var(--accent-blue); background: #00f0ff08; }
+  .badge-multi  { border-color: #ffee0044; color: var(--accent-amber); background: #ffee0008; }
+  .badge-fill   { border-color: #00ff6644; color: var(--accent-emerald); background: #00ff6608; }
+  .badge-short  { border-color: #ff007f44; color: var(--accent-pink); background: #ff007f08; }
+
+  .diff-easy   { border-color: #00ff6644; color: var(--accent-emerald); background: #00ff6608; }
+  .diff-medium { border-color: #ffee0044; color: var(--accent-amber); background: #ffee0008; }
+  .diff-hard   { border-color: #ff007f44; color: var(--danger); background: #ff007f08; }
+
+  .q-stem { font-size: 0.9rem; margin-bottom: 0.75rem; line-height: 1.65; color: var(--text); }
+  .q-options { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.75rem; }
+  .q-option {
+    padding: 0.45rem 0.75rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+    color: var(--text);
+  }
+  .q-option-clickable {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s, box-shadow 0.15s;
+  }
+  .q-option-clickable:hover {
+    border-color: var(--primary);
+    background: #00f0ff08;
+    box-shadow: 0 0 8px #00f0ff22;
+  }
+  .q-option-clickable input[type="radio"],
+  .q-option-clickable input[type="checkbox"] {
+    width: auto;
+    accent-color: var(--primary);
+  }
+  .q-opt-label { flex: 1; }
+
+  .q-option-correct {
+    background: #00ff6612 !important;
+    border-color: var(--success) !important;
+    box-shadow: 0 0 8px #00ff6633;
+  }
+  .q-option-wrong {
+    background: #ff007f12 !important;
+    border-color: var(--danger) !important;
+    box-shadow: 0 0 8px #ff007f33;
+  }
+
+  .q-fill { margin-bottom: 0.75rem; }
+  .fill-input {
+    width: 100%;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+    background: var(--bg-input);
+    color: var(--text);
+    font-family: inherit;
+  }
+  .fill-input:focus { outline: none; border-color: var(--primary); box-shadow: var(--glow-cyan); }
+  .fill-textarea { min-height: 80px; resize: vertical; }
+
+  .fill-correct { border-color: var(--success) !important; box-shadow: 0 0 8px #00ff6633 !important; }
+  .fill-wrong   { border-color: var(--danger) !important; box-shadow: 0 0 8px #ff007f33 !important; }
+
+  .type-checkboxes { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .type-cb {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.75rem;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--text-muted);
+  }
+  .type-cb:hover { border-color: var(--primary); color: var(--text); box-shadow: 0 0 6px #00f0ff22; }
+  .type-cb input[type="checkbox"] { width: auto; accent-color: var(--primary); }
+
+  .q-feedback { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border); }
+
+  .score-bar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    justify-content: center;
+    padding: 1rem;
+    border-radius: var(--radius);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+  }
+  .score-num {
+    font-size: 2rem;
+    font-weight: 800;
+    text-shadow: 0 0 12px;
+  }
+  .score-pass { color: var(--success); text-shadow: 0 0 12px #00ff6666; }
+  .score-fail { color: var(--danger); text-shadow: 0 0 12px #ff007f66; }
+  .score-detail { color: var(--text-muted); font-size: 0.85rem; }
+
+  .q-answer {
+    background: #00ff6608;
+    border: 1px solid #00ff6633;
+    border-radius: var(--radius);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+  }
+  .q-answer span:first-child { font-weight: 600; color: var(--success); }
+  .q-analysis { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem; }
+  .q-mistakes { font-size: 0.78rem; color: var(--danger); margin-bottom: 0.3rem; text-shadow: 0 0 4px #ff007f22; }
+
+  .q-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.5rem; }
+  .q-tag {
+    font-size: 0.65rem;
+    background: #00f0ff08;
+    color: var(--primary);
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--radius);
+    border: 1px solid #00f0ff22;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .result-json {
+    background: #050508;
+    color: #00f0ff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    font-size: 0.8rem;
+    overflow-x: auto;
+    max-height: 500px;
+    white-space: pre-wrap;
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", "JetBrains Mono", monospace;
+    text-shadow: 0 0 4px #00f0ff33;
+  }
+
+  /* ── Footer ─────────────────────────────────── */
+  .footer {
+    margin-top: auto;
+    text-align: center;
+    padding: 1.5rem;
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* ── Scrollbar ──────────────────────────────── */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #00f0ff44; border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+  /* ── Progress bar ────────────────────────────── */
+  .progress-bar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 0.6rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .progress-track {
+    flex: 1;
+    height: 2px;
+    background: var(--border);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--primary);
+    box-shadow: 0 0 8px var(--primary);
+    transition: width 0.3s ease;
+  }
+  .progress-label { color: var(--primary); font-weight: 600; white-space: nowrap; text-shadow: 0 0 4px #00f0ff44; }
+
+  /* ── Loading overlay ─────────────────────────── */
+  .loading-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,.92);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .loading-overlay.active { opacity: 1; pointer-events: auto; }
+  .loading-spinner {
+    width: 48px; height: 48px;
+    border: 2px solid #00f0ff22;
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    filter: drop-shadow(0 0 12px var(--primary));
+    margin-bottom: 1.5rem;
+  }
+  .loading-text {
+    font-family: inherit;
+    font-size: 0.85rem;
+    color: var(--primary);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    min-height: 1.5em;
+    text-shadow: 0 0 6px #00f0ff44;
+  }
+  .loading-cursor {
+    display: inline-block;
+    width: 8px;
+    height: 1em;
+    background: var(--primary);
+    margin-left: 2px;
+    animation: blink 0.6s step-end infinite;
+    vertical-align: text-bottom;
+    box-shadow: 0 0 4px var(--primary);
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* ── Collapsible questions ───────────────────── */
+  .q-header { cursor: default; }
+  .q-header.collapsible { cursor: pointer; user-select: none; }
+  .q-header.collapsible:hover { background: #00f0ff06; }
+  .q-header .collapse-icon {
+    display: inline-block;
+    transition: transform 0.2s;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+  }
+  .q-header.collapsible .collapse-icon { display: inline-block; }
+  .question-card .q-body { max-height: 5000px; opacity: 1; transition: max-height 0.3s ease, opacity 0.2s; overflow: hidden; }
+  .question-card.collapsed .q-body { max-height: 0; opacity: 0; }
+  .question-card.collapsed .q-header.collapsible .collapse-icon { transform: rotate(-90deg); }
+
+  /* ── Option hover scale ──────────────────────── */
+  .q-option-clickable {
+    transition: background 0.1s, border-color 0.1s, box-shadow 0.15s, transform 0.15s;
+  }
+  .q-option-clickable:hover {
+    transform: scale(1.02);
+  }
+  .q-option-clickable:active {
+    transform: scale(0.99);
+  }
+
+  /* ── Neon scanline overlay (subtle) ─────────── */
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,240,255,.008) 2px,
+      rgba(0,240,255,.008) 4px
+    );
+    z-index: 1;
+  }  
+</style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loading-text"></div>
+</div>
+
+<!-- Progress bar (hidden by default) -->
+<div class="progress-bar" id="progress-bar" style="display:none;">
+  <span class="progress-label" id="progress-label">0/0</span>
+  <div class="progress-track">
+    <div class="progress-fill" id="progress-fill"></div>
+  </div>
+  <span style="font-size:0.7rem;color:var(--text-dim);">Progress</span>
+</div>
+
+<div class="container">
+  <header class="header">
+    <h1>DeepSeek Quiz Generator</h1>
+    <p>Upload a document, AI generates structured quizzes</p>
+  </header>
+
+  <!-- 输入卡片 -->
+  <div class="card">
+    <form id="quiz-form">
+      <!-- 文件上传 -->
+      <div class="form-group">
+        <label>📄 Upload Document <span class="form-hint">(.txt / .md / plain text)</span></label>
+        <div class="file-area" id="file-area">
+          <input type="file" id="file-input" accept=".txt,.md,.csv,.html,.json" required>
+          <div class="file-placeholder" id="file-placeholder">
+            Click to select, or drag and drop a file here
+          </div>
+          <div class="file-name" id="file-name" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- 参数行 -->
+      <div class="row">
+        <div class="form-group">
+          <label>📝 Question Count</label>
+          <input type="number" id="count" name="count" value="5" min="5" max="50">
+        </div>
+        <div class="form-group">
+          <label>📊 Difficulty</label>
+          <select id="difficulty" name="difficulty">
+            <option value="simple">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+            <option value="mixed" selected>Mixed</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>📋 Question Types</label>
+          <div class="type-checkboxes">
+            <label class="type-cb"><input type="checkbox" name="qtype" value="单选题" checked onchange="syncSelectAll()"> Single Choice</label>
+            <label class="type-cb"><input type="checkbox" name="qtype" value="多选题" onchange="syncSelectAll()"> Multiple Choice</label>
+            <label class="type-cb"><input type="checkbox" name="qtype" value="填空题" checked onchange="syncSelectAll()"> Fill in the Blank</label>
+            <label class="type-cb"><input type="checkbox" name="qtype" value="简答题" onchange="syncSelectAll()"> Short Answer</label>
+            <label class="type-cb" style="font-weight:700;color:var(--primary);cursor:pointer;" onclick="toggleAllTypes()">
+              <input type="checkbox" id="select-all-types" onchange="syncAllTypes()"> 🔄 Select All
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>💬 Custom Requirements <span class="form-hint">e.g. "no multiple choice", "focus on chapter 3"</span></label>
+        <input type="text" id="custom_requirements" name="custom_requirements" placeholder="Enter custom requirements...">
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="submit-btn">🚀 Generate Quiz</button>
+    </form>
+    <div class="status" id="status"></div>
+  </div>
+
+  <!-- 结果卡片 -->
+  <div class="card result-hidden" id="result-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
+      <h2 style="font-size:1.2rem;">📋 Results</h2>
+      <div class="btn-row" style="align-items:center;">
+        <button class="btn btn-outline" onclick="downloadJSON()">⬇ Download JSON</button>
+        <button class="btn btn-outline" onclick="toggleView('rendered')">📖 Reading View</button>
+        <button class="btn btn-outline" onclick="toggleView('raw')">{ } JSON Source</button>
+      </div>
+    </div>
+        <button class="btn btn-outline" onclick="toggleView('raw')">{ } JSON 源码</button>
+      </div>
+    </div>
+
+    <div id="rendered-view"></div>
+    <div id="raw-view" style="display:none">
+      <pre class="result-json" id="json-raw"></pre>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">Powered by DeepSeek AI</footer>
+
+<script>
+const $ = (s) => document.querySelector(s);
+
+// File drag
+const fileArea = $('#file-area');
+const fileInput = $('#file-input');
+const filePlaceholder = $('#file-placeholder');
+const fileName = $('#file-name');
+fileArea.addEventListener('click', () => fileInput.click());
+fileArea.addEventListener('dragover', (e) => { e.preventDefault(); fileArea.classList.add('dragover'); });
+fileArea.addEventListener('dragleave', () => fileArea.classList.remove('dragover'));
+fileArea.addEventListener('drop', (e) => { e.preventDefault(); fileArea.classList.remove('dragover'); if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; showFileName(e.dataTransfer.files[0].name); } });
+fileInput.addEventListener('change', () => { if (fileInput.files.length) showFileName(fileInput.files[0].name); });
+function showFileName(name) { filePlaceholder.style.display = 'none'; fileName.style.display = 'block'; fileName.textContent = '📎 ' + name; }
+
+// Type select all
+function toggleAllTypes() { const all = document.querySelectorAll('input[name="qtype"]'); const ac = Array.from(all).every(cb => cb.checked); all.forEach(cb => { cb.checked = !ac; }); document.getElementById('select-all-types').checked = !ac; }
+function syncAllTypes() { const ac = document.getElementById('select-all-types').checked; document.querySelectorAll('input[name="qtype"]:not(#select-all-types)').forEach(cb => { cb.checked = ac; }); }
+function syncSelectAll() { const all = document.querySelectorAll('input[name="qtype"]:not(#select-all-types)'); const ac = Array.from(all).every(cb => cb.checked); document.getElementById('select-all-types').checked = ac; }
+
+// Form submit
+let lastResult = null;
+$('#quiz-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const file = fileInput.files[0];
+    if (!file) { showStatus('Please select a document', 'error'); return; }
+  const selectedTypes = Array.from(document.querySelectorAll('input[name="qtype"]:checked')).map(cb => cb.value).join(',');
+  // English quiz toggle
+  const isEnglish = document.getElementById('english-quiz')?.checked;
+  let customReqs = $('#custom_requirements').value;
+  if (isEnglish) {
+    customReqs = customReqs ? customReqs + '；请用英文生成所有题目、选项、解析和标签' : '请用英文生成所有题目、选项、解析和标签';
+  }
+  const btn = $('#submit-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Generating...';
+  clearStatus(); hideResult();
+  showLoading(['Analyzing document...','Parsing knowledge points...','Generating questions by difficulty...','Designing high-quality distractors...','Validating question quality...','Almost done...'], 2500);
+  const formData = new FormData();
+  formData.append('file', file); formData.append('count', $('#count').value); formData.append('difficulty', $('#difficulty').value); formData.append('types', selectedTypes); formData.append('custom_requirements', customReqs);
+  try {
+    const resp = await fetch('/api/generate', { method: 'POST', body: formData });
+    const data = await resp.json();
+    if (data.error) { showStatus('❌ ' + data.message + ' (' + data.error_type + ')', 'error'); }
+    else { showStatus('✅ Quiz generated!', 'success'); lastResult = data; renderResult(data); }
+  } catch (err) { showStatus('❌ Request failed: ' + err.message, 'error'); }
+  finally { hideLoading(); btn.disabled = false; btn.innerHTML = '🚀 Generate Quiz'; }
+});
+
+// Render
+function renderResult(data) {
+  const meta = data.quiz_metadata || {}, questions = data.questions || [];
+  const diffMap = { '简单': 'diff-easy', '中等': 'diff-medium', '困难': 'diff-hard' };
+  const typeMap = { '单选题': 'badge-single', '多选题': 'badge-multi', '填空题': 'badge-fill', '简答题': 'badge-short' };
+  let html = '<div class="meta-grid">' +
+    '<div class="meta-item"><div class="meta-label">Quiz Title</div><div class="meta-value">' + esc(meta.title||'N/A') + '</div></div>' +
+    '<div class="meta-item"><div class="meta-label">Questions</div><div class="meta-value">' + questions.length + '</div></div>' +
+    '<div class="meta-item"><div class="meta-label">Difficulty</div><div class="meta-value">' + esc(meta.difficulty_distribution||'N/A') + '</div></div>' +
+    '<div class="meta-item"><div class="meta-label">Types</div><div class="meta-value">' + esc((meta.question_types||[]).join(' / ')) + '</div></div>' +
+    '<div class="meta-item"><div class="meta-label">Est. Time</div><div class="meta-value">' + (meta.estimated_solve_time_minutes||'N/A') + ' min</div></div>' +
+    '<div class="meta-item"><div class="meta-label">Generated</div><div class="meta-value">' + esc((meta.created_at||'').slice(0,16)) + '</div></div>' +
+  '</div><h3 style="margin-bottom:0.75rem;">📝 Questions</h3>';
+  for (let i = 0; i < questions.length; i++) {
+    const q = questions[i], qIdx = i + 1;
+    html += '<div class="question-card" id="qcard-' + qIdx + '"><div class="q-header"><span class="q-id">' + esc(q.id) + '</span><span class="q-badge ' + (typeMap[q.type]||'') + '">' + esc(q.type) + '</span><span class="q-badge ' + (diffMap[q.difficulty]||'') + '">' + esc(q.difficulty) + '</span></div><div class="q-body"><div class="q-stem"><strong>' + qIdx + '.</strong> ' + esc(q.stem) + '</div>';
+    if (q.options && (q.type === '单选题' || q.type === '多选题')) {
+      const it = q.type === '单选题' ? 'radio' : 'checkbox';
+      html += '<div class="q-options">';
+      for (const [k, v] of Object.entries(q.options)) {
+        html += '<label class="q-option q-option-clickable" data-q="' + qIdx + '" data-key="' + esc(k) + '"><input type="' + it + '" name="q' + qIdx + '" value="' + esc(k) + '" onchange="onAnswerChange(' + qIdx + ')"><span class="q-opt-label"><strong>' + esc(k) + '.</strong> ' + esc(v) + '</span></label>';
+      }
+      html += '</div>';
+    } else if (q.type === '填空题') {
+      html += '<div class="q-fill"><input type="text" class="fill-input" id="fill-' + qIdx + '" placeholder="Type your answer..." oninput="onAnswerChange(' + qIdx + ')"></div>';
+    } else if (q.type === '简答题') {
+      html += '<div class="q-fill"><textarea class="fill-input fill-textarea" id="fill-' + qIdx + '" placeholder="Type your answer..." oninput="onAnswerChange(' + qIdx + ')"></textarea></div>';
+    }
+    html += '<div class="q-feedback" id="feedback-' + qIdx + '" style="display:none;"><div class="q-answer"><span id="result-icon-' + qIdx + '"></span> <strong>Correct Answer:</strong> ' + esc(q.correct_answer) + '</div>';
+    if (q.analysis) {
+      html += '<div class="q-analysis"><strong>Analysis:</strong> ' + esc(q.analysis.short) + '</div><div class="q-analysis" style="font-size:0.8rem;">' + esc(q.analysis.detailed) + '</div>';
+      if (q.analysis.common_mistakes&&q.analysis.common_mistakes.length) html += '<div class="q-mistakes">⚠ Common Mistakes: ' + q.analysis.common_mistakes.map(esc).join(' / ') + '</div>';
+    }
+    html += '</div>';
+    if (q.knowledge_tags&&q.knowledge_tags.length) html += '<div class="q-tags">' + q.knowledge_tags.map(t => '<span class="q-tag">' + esc(t) + '</span>').join('') + '</div>';
+    html += '</div></div>';
+  }
+  html += '<div style="text-align:center;margin-top:1rem;"><button class="btn btn-primary" id="submit-btn-quiz" onclick="submitQuiz()" style="max-width:300px;">📝 Submit Answers</button><div id="score-area" style="display:none;margin-top:1rem;"></div></div>';
+  $('#rendered-view').innerHTML = html;
+  $('#json-raw').textContent = JSON.stringify(data, null, 2);
+  $('#result-card').classList.remove('result-hidden'); $('#result-card').classList.add('result-visible');
+  $('#raw-view').style.display = 'none'; $('#rendered-view').style.display = 'block';
+  initCollapsible(); updateProgress();
+  $('#result-card').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Quiz logic
+let answeredCount = 0;
+function onAnswerChange(qIdx) {
+  const old = answeredCount; answeredCount = 0;
+  const qs = lastResult?.questions || [];
+  for (let i = 0; i < qs.length; i++) { if (getUserAnswer(i+1,qs[i])) answeredCount++; }
+  if (answeredCount !== old) { const btn = $('#submit-btn-quiz'); if (btn) btn.textContent = '📝 Submit Answers (' + answeredCount + '/' + qs.length + ')'; }
+  updateProgress();
+}
+function getUserAnswer(qIdx, q) {
+  if (q.type === '单选题') { const el = document.querySelector('input[name="q' + qIdx + '"]:checked'); return el ? el.value : null; }
+  if (q.type === '多选题') { const els = document.querySelectorAll('input[name="q' + qIdx + '"]:checked'); if (els.length===0) return null; return Array.from(els).map(e=>e.value).sort().join(','); }
+  if (q.type === '填空题' || q.type === '简答题') { const el = document.getElementById('fill-' + qIdx); return el&&el.value.trim() ? el.value.trim() : null; }
+  return null;
+}
+function submitQuiz() {
+  const qs = lastResult?.questions || []; if (!qs.length) return;
+  let correct = 0, total = 0;
+  for (let i = 0; i < qs.length; i++) {
+    const q = qs[i], qIdx = i + 1, ua = getUserAnswer(qIdx, q);
+    if (ua === null) continue;
+    total++;
+    const ca = q.correct_answer; let isCorrect = false;
+    if (q.type === '单选题') isCorrect = ua === ca;
+    else if (q.type === '多选题') isCorrect = ua === ca;
+    else if (q.type === '填空题') { const ac = ca.split('|').map(s=>s.trim()); isCorrect = ac.some(a=>a===ua); }
+    else isCorrect = ua.includes(ca) || ca.includes(ua);
+    const fb = document.getElementById('feedback-' + qIdx); if (fb) fb.style.display = '';
+    const icon = document.getElementById('result-icon-' + qIdx); if (icon) icon.textContent = isCorrect ? '✅' : '❌';
+    if (q.options && (q.type==='单选题'||q.type==='多选题')) {
+      const ls = document.querySelectorAll('.q-option-clickable[data-q="' + qIdx + '"]');
+      const ck = ca.split(',').map(s=>s.trim());
+      ls.forEach(l => { const k = l.getAttribute('data-key'); if (ck.includes(k)) l.classList.add('q-option-correct'); const inp = l.querySelector('input'); if (inp&&inp.checked&&!ck.includes(k)) l.classList.add('q-option-wrong'); inp.disabled = true; l.style.cursor = 'default'; l.style.pointerEvents = 'none'; });
+    } else if (q.type==='填空题'||q.type==='简答题') { const el = document.getElementById('fill-'+qIdx); if (el) { el.disabled = true; el.classList.add(isCorrect?'fill-correct':'fill-wrong'); } }
+    if (isCorrect) correct++;
+  }
+  const btn = $('#submit-btn-quiz'); if (btn) { btn.disabled = true; btn.textContent = '✅ Submitted'; }
+  const sa = $('#score-area'); if (sa) {
+    const pct = total>0 ? Math.round(correct/total*100) : 0, pc = pct>=60 ? 'score-pass' : 'score-fail';
+    sa.style.display = ''; sa.innerHTML = '<div class="score-bar"><span class="score-num ' + pc + '">' + correct + '/' + total + '</span><span class="score-detail">Accuracy ' + pct + '% ' + (pct>=60?'🎉':'💪') + '</span></div>';
+    sa.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+
+// Helpers
+function esc(s) { if (s==null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function hideResult() { $('#result-card').classList.add('result-hidden'); $('#result-card').classList.remove('result-visible'); }
+function toggleView(mode) { $('#rendered-view').style.display = (mode==='rendered')?'block':'none'; $('#raw-view').style.display = (mode==='raw')?'block':'none'; }
+function showStatus(m,c) { const e = $('#status'); e.textContent = m; e.className = 'status ' + (c||''); }
+function clearStatus() { $('#status').textContent=''; $('#status').className='status'; }
+
+// Loading
+function showLoading(msgs, iv) { const o = $('#loading-overlay'), t = $('#loading-text'); o.classList.add('active'); let i=0; typeText(t,msgs[i]); o._iv = setInterval(()=>{ i=(i+1)%msgs.length; typeText(t,msgs[i]); },iv); }
+function hideLoading() { const o = $('#loading-overlay'); clearInterval(o._iv); o.classList.remove('active'); $('#loading-text').innerHTML=''; }
+function typeText(el, txt) { el.innerHTML=''; let i=0; const c='<span class="loading-cursor"></span>', iv=setInterval(()=>{ el.innerHTML=txt.slice(0,i+1)+c; i++; if(i>=txt.length){clearInterval(iv);el.innerHTML=txt+c;} },50); }
+
+// Collapsible
+function initCollapsible() { const cs = document.querySelectorAll('.question-card'); if (cs.length<=10) return; cs.forEach(c=>{ const h=c.querySelector('.q-header'),b=c.querySelector('.q-body'); if(!h||!b)return; h.classList.add('collapsible'); const ic=document.createElement('span');ic.className='collapse-icon';ic.textContent=' ▼';h.appendChild(ic);h.addEventListener('click',()=>c.classList.toggle('collapsed')); }); }
+
+// Progress
+function updateProgress() { const qs = lastResult?.questions||[]; const t=qs.length; if(t===0)return; let a=0; for(let i=0;i<t;i++){if(getUserAnswer(i+1,qs[i]))a++;} const p=Math.round(a/t*100); const b=$('#progress-bar'),f=$('#progress-fill'),l=$('#progress-label');b.style.display='';f.style.width=p+'%';l.textContent=a+'/'+t; }
+
+function downloadJSON() { if(!lastResult)return; const blob=new Blob([JSON.stringify(lastResult,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url; const stem=(fileInput.files[0]?.name||'quiz').replace(/\.[^.]+$/,''); a.download=stem+'_quiz.json';a.click();URL.revokeObjectURL(url); }
+</script>
+</body>
+</html>
