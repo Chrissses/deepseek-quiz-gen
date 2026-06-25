@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-quiz-gen"
+version = "1.1.0"
+description = "AI-powered quiz generator — upload a document, get a structured quiz in seconds. Multi-provider: OpenAI / Claude / Gemini / DeepSeek / Qwen / Zhipu."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [{name = "Chrissses"}]
+keywords = ["quiz", "ai", "education", "openai", "claude", "gemini", "deepseek"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Education",
+]
+
+dependencies = [
+    "openai>=1.0.0",
+    "typer>=0.12.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "python-multipart>=0.0.9",
+    "jinja2>=3.1.0",
+    "python-dotenv>=1.0.0",
+    "anthropic>=0.30.0",
+    "google-genai>=1.0.0",
+]
+
+[project.scripts]
+quizgen = "src.cli:main"
+quizgen-web = "src.web:app"
+
+[project.urls]
+Repository = "https://github.com/Chrissses/ai-quiz-gen"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
