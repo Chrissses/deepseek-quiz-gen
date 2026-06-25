@@ -1,0 +1,60 @@
+{
+  "_comment": "AI 厂商配置 — 支持 OpenAI 兼容协议 / Anthropic / Gemini 三类。api_key 使用 ${ENV_VAR} 从 .env 读取。",
+  "providers": [
+    {
+      "id": "deepseek",
+      "name": "DeepSeek",
+      "type": "openai_compatible",
+      "api_key": "${DEEPSEEK_API_KEY}",
+      "base_url": "https://api.deepseek.com",
+      "model": "deepseek-chat",
+      "default": true
+    },
+    {
+      "id": "openai",
+      "name": "OpenAI",
+      "type": "openai_compatible",
+      "api_key": "${OPENAI_API_KEY}",
+      "base_url": "https://api.openai.com/v1",
+      "model": "gpt-4o"
+    },
+    {
+      "id": "qwen",
+      "name": "通义千问",
+      "type": "openai_compatible",
+      "api_key": "${QWEN_API_KEY}",
+      "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "model": "qwen-plus"
+    },
+    {
+      "id": "zhipu",
+      "name": "智谱 GLM",
+      "type": "openai_compatible",
+      "api_key": "${ZHIPU_API_KEY}",
+      "base_url": "https://open.bigmodel.cn/api/paas/v4",
+      "model": "glm-4-flash"
+    },
+    {
+      "id": "moonshot",
+      "name": "Moonshot (Kimi)",
+      "type": "openai_compatible",
+      "api_key": "${MOONSHOT_API_KEY}",
+      "base_url": "https://api.moonshot.cn/v1",
+      "model": "moonshot-v1-8k"
+    },
+    {
+      "id": "claude",
+      "name": "Anthropic Claude",
+      "type": "anthropic",
+      "api_key": "${ANTHROPIC_API_KEY}",
+      "model": "claude-3-5-sonnet-20240620"
+    },
+    {
+      "id": "gemini",
+      "name": "Google Gemini",
+      "type": "gemini",
+      "api_key": "${GEMINI_API_KEY}",
+      "model": "gemini-2.0-flash"
+    }
+  ]
+}

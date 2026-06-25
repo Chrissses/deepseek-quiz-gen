@@ -1,7 +1,5 @@
 """提示词模板 —— 加载系统提示词，根据参数构建完整的 messages 列表。"""
 
-from pathlib import Path
-
 # ── 系统提示词（从原始 deepseek提示词.txt 提取） ──────────────────────────
 
 SYSTEM_PROMPT = """# Role

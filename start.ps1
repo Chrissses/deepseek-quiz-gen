@@ -82,7 +82,7 @@ while ($true) {
     Clear-Host
     Write-Host ""
     Write-Host "+---------------------------------------------+"
-    Write-Host "|     DeepSeek Quiz Generator v1.0            |"
+    Write-Host "|     AI Quiz Generator v1.1 (Multi-Provider)  |"
     Write-Host "+---------------------------------------------+"
     Write-Host "|  1. CLI  - Command line mode                 |"
     Write-Host "|  2. Web  - Browser mode                      |"

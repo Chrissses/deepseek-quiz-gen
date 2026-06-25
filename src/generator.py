@@ -1,7 +1,6 @@
-"""核心出题引擎 —— 调用 DeepSeek API，解析校验返回的 JSON。"""
+"""核心出题引擎 —— 调用 AI Provider API，解析校验返回的 JSON。"""
 
 import json
-import os
 import re
 from datetime import datetime, timezone
 from typing import Any
@@ -9,22 +8,10 @@ from typing import Any
 from dotenv import load_dotenv
 
 from .prompt import build_messages
+from .providers import create_provider
+from .provider_config import get_default_provider, get_provider_by_id, load_providers
 
 load_dotenv()
-
-# ── 配置 ──────────────────────────────────────────────────────────────────
-
-DEFAULT_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
-DEFAULT_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
-API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
-
-
-def _get_client():
-    """延迟导入 openai，仅在需要时创建客户端。"""
-    from openai import OpenAI
-
-    return OpenAI(api_key=API_KEY, base_url=DEFAULT_BASE_URL)
-
 
 # ── JSON 提取 ─────────────────────────────────────────────────────────────
 
@@ -151,6 +138,53 @@ def validate_inputs(
     return None
 
 
+# ── Provider 解析 ──────────────────────────────────────────────────────────
+
+
+def _resolve_provider_config(
+    provider_id: str | None,
+) -> dict[str, Any] | None:
+    """解析 Provider 配置。
+
+    Args:
+        provider_id: 指定的 provider ID，为 None 时使用默认
+
+    Returns:
+        Provider 配置字典，包含 type / api_key / base_url / model 等
+
+    Raises:
+        ValueError: 未找到 provider 或未配置 API Key
+    """
+    all_providers = load_providers()
+
+    if not all_providers:
+        raise ValueError(
+            "未找到任何 AI Provider 配置。请创建 providers.json 并在 .env 中设置对应的 API Key。"
+        )
+
+    if provider_id:
+        config = get_provider_by_id(all_providers, provider_id)
+        if config is None:
+            available = ", ".join(p["id"] for p in all_providers)
+            raise ValueError(
+                f"未找到 provider '{provider_id}'。可用: {available}"
+            )
+    else:
+        config = get_default_provider(all_providers)
+        if config is None:
+            available = ", ".join(p["id"] for p in all_providers)
+            raise ValueError(
+                f"没有可用的默认 Provider。请在 providers.json 中设置 default: true，或在 .env 中配置 API Key。可用: {available}"
+            )
+
+    if not config.get("api_key"):
+        raise ValueError(
+            f"Provider '{config['id']}' 未配置 API Key。请在 .env 中设置 {config.get('id', '').upper()}_API_KEY。"
+        )
+
+    return config
+
+
 # ── 主入口 ────────────────────────────────────────────────────────────────
 
 
@@ -162,6 +196,7 @@ def generate_quiz(
     source_filename: str = "document.txt",
     custom_requirements: str = "",
     model: str | None = None,
+    provider_id: str | None = None,
 ) -> dict[str, Any]:
     """生成试卷的主入口。
 
@@ -173,6 +208,7 @@ def generate_quiz(
         source_filename: 源文件名
         custom_requirements: 定制需求
         model: 覆盖默认模型
+        provider_id: 指定 AI provider ID，为 None 使用默认
 
     Returns:
         正常试卷 dict 或错误 dict
@@ -189,13 +225,15 @@ def generate_quiz(
     if error:
         return error
 
-    # 2. 检查 API Key
-    if not API_KEY:
+    # 2. 解析 Provider
+    try:
+        provider_config = _resolve_provider_config(provider_id)
+    except ValueError as e:
         return {
             "error": True,
-            "message": "未配置 DEEPSEEK_API_KEY",
+            "message": str(e),
             "error_type": "config_error",
-            "suggestion": "请在 .env 文件或环境变量中设置 DEEPSEEK_API_KEY。",
+            "suggestion": "请检查 providers.json 和 .env 配置。",
         }
 
     # 3. 构建消息并调用 API
@@ -208,25 +246,17 @@ def generate_quiz(
         custom_requirements=custom_requirements,
     )
 
-    client = _get_client()
+    provider = create_provider(provider_config)
+    effective_model = model or provider_config.get("model", "deepseek-chat")
 
     try:
-        response = client.chat.completions.create(
-            model=model or DEFAULT_MODEL,
-            messages=messages,  # pyright: ignore[reportArgumentType]
+        raw_content = provider.generate(
+            messages=messages,
+            model=effective_model,
             temperature=0.7,
             max_tokens=8192,
             response_format={"type": "json_object"},
         )
-        raw_content = response.choices[0].message.content
-
-        if not raw_content:
-            return {
-                "error": True,
-                "message": "API 返回空内容",
-                "error_type": "api_empty_response",
-                "suggestion": "请重试或检查 API 配置。",
-            }
 
         # Debug: 打印原始返回
         print(f"[DEBUG] Raw response ({len(raw_content)} chars):")
@@ -236,9 +266,9 @@ def generate_quiz(
     except Exception as e:
         return {
             "error": True,
-            "message": f"API 调用失败: {str(e)}",
+            "message": f"AI 调用失败 [{provider_config['id']}]: {e}",
             "error_type": "api_error",
-            "suggestion": "请检查 API Key 与网络连接。",
+            "suggestion": "请检查 API Key 与网络连接，或切换其他 Provider。",
         }
 
     # 4. 解析 JSON
@@ -267,3 +297,8 @@ def generate_quiz(
         )
 
     return result
+
+
+def list_available_providers() -> list[dict[str, Any]]:
+    """列出所有可用的 Provider（供 CLI / Web 展示）。"""
+    return load_providers()

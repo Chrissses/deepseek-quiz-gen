@@ -6,11 +6,11 @@ from typing import Optional
 
 import typer
 
-from .generator import VALID_DIFFICULTIES, VALID_QUESTION_TYPES, generate_quiz
+from .generator import generate_quiz, list_available_providers
 
 app = typer.Typer(
     name="deepseek-quiz",
-    help="基于 DeepSeek AI 的智能出题工具 —— 根据文档自动生成结构化试卷 JSON。",
+    help="基于 AI 的智能出题工具 —— 根据文档自动生成结构化试卷 JSON。支持 DeepSeek / OpenAI / Claude / Gemini 等多厂商。",
     add_completion=False,
 )
 
@@ -51,6 +51,12 @@ def generate(
         "-m",
         help="覆盖默认模型名称",
     ),
+    provider: Optional[str] = typer.Option(
+        None,
+        "--provider",
+        "-p",
+        help="指定 AI 厂商 ID（如 deepseek / openai / claude / gemini），不指定则使用默认",
+    ),
     pretty: bool = typer.Option(
         True,
         "--pretty/--compact",
@@ -71,8 +77,9 @@ def generate(
 
     # 生成
     typer.echo(f"📄 文档: {source_name} ({len(doc_text)} 字符)")
+    typer.echo(f"🤖 Provider: {provider or '默认'}")
     typer.echo(f"📝 题目数: {count}  | 难度: {difficulty}  | 题型: {', '.join(question_types)}")
-    typer.echo("⏳ 正在调用 DeepSeek API 生成试卷...")
+    typer.echo("⏳ 正在调用 AI 生成试卷...")
 
     result = generate_quiz(
         document_text=doc_text,
@@ -82,6 +89,7 @@ def generate(
         source_filename=source_name,
         custom_requirements=requirements,
         model=model,
+        provider_id=provider,
     )
 
     # 输出
@@ -109,6 +117,27 @@ def generate(
     typer.echo(f"   题目数: {len(questions)}")
     typer.echo(f"   难度分布: {meta.get('difficulty_distribution', 'N/A')}")
     typer.echo(f"   预计用时: {meta.get('estimated_solve_time_minutes', 'N/A')} 分钟")
+
+
+@app.command()
+def providers():
+    """列出所有已配置的 AI Provider。"""
+    all_providers = list_available_providers()
+
+    if not all_providers:
+        typer.secho("⚠️  未找到任何 Provider 配置。", fg="yellow")
+        typer.echo("请在 .env 中设置 API Key（如 DEEPSEEK_API_KEY），或创建 providers.json。")
+        return
+
+    typer.echo(f"\n{'ID':<12} {'名称':<16} {'类型':<20} {'默认':<6} 模型")
+    typer.echo("-" * 80)
+    for p in all_providers:
+        has_key = "✅" if p.get("api_key") else "❌"
+        is_default = "⭐" if p.get("default") else ""
+        typer.echo(
+            f"{p['id']:<12} {p['name']:<16} {p['type']:<20} "
+            f"{is_default:<6} {has_key} {p.get('model', 'N/A')}"
+        )
 
 
 @app.command()

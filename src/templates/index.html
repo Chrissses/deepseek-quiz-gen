@@ -570,6 +570,20 @@
         </div>
       </div>
 
+      <!-- AI 厂商选择 -->
+      <div class="row">
+        <div class="form-group" style="flex:1;">
+          <label>🤖 AI Provider <span class="form-hint">select which AI to use</span></label>
+          <select id="provider_id" name="provider_id">
+            <option value="">Loading...</option>
+          </select>
+        </div>
+        <div class="form-group" style="flex:1;">
+          <label>🔧 Model <span class="form-hint">override default model (optional)</span></label>
+          <input type="text" id="model" name="model" placeholder="Auto (uses provider default)">
+        </div>
+      </div>
+
       <!-- 参数行 -->
       <div class="row">
         <div class="form-group">
@@ -619,9 +633,6 @@
         <button class="btn btn-outline" onclick="toggleView('raw')">{ } JSON Source</button>
       </div>
     </div>
-        <button class="btn btn-outline" onclick="toggleView('raw')">{ } JSON 源码</button>
-      </div>
-    </div>
 
     <div id="rendered-view"></div>
     <div id="raw-view" style="display:none">
@@ -630,7 +641,7 @@
   </div>
 </div>
 
-<footer class="footer">Powered by DeepSeek AI</footer>
+<footer class="footer">Multi-Provider AI Quiz Generator</footer>
 
 <script>
 const $ = (s) => document.querySelector(s);
@@ -646,6 +657,31 @@ fileArea.addEventListener('dragleave', () => fileArea.classList.remove('dragover
 fileArea.addEventListener('drop', (e) => { e.preventDefault(); fileArea.classList.remove('dragover'); if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; showFileName(e.dataTransfer.files[0].name); } });
 fileInput.addEventListener('change', () => { if (fileInput.files.length) showFileName(fileInput.files[0].name); });
 function showFileName(name) { filePlaceholder.style.display = 'none'; fileName.style.display = 'block'; fileName.textContent = '📎 ' + name; }
+
+// Load providers
+async function loadProviders() {
+  try {
+    const resp = await fetch('/api/providers');
+    const providers = await resp.json();
+    const sel = $('#provider_id');
+    sel.innerHTML = '';
+    if (providers.length === 0) {
+      sel.innerHTML = '<option value="">No providers configured</option>';
+      return;
+    }
+    providers.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = (p.default ? '⭐ ' : '') + p.name + ' (' + p.model + ')' + (p.has_key ? '' : ' [no key]');
+      if (p.default) opt.selected = true;
+      if (!p.has_key) opt.disabled = true;
+      sel.appendChild(opt);
+    });
+  } catch (err) {
+    $('#provider_id').innerHTML = '<option value="">Failed to load</option>';
+  }
+}
+loadProviders();
 
 // Type select all
 function toggleAllTypes() { const all = document.querySelectorAll('input[name="qtype"]'); const ac = Array.from(all).every(cb => cb.checked); all.forEach(cb => { cb.checked = !ac; }); document.getElementById('select-all-types').checked = !ac; }
@@ -671,6 +707,8 @@ $('#quiz-form').addEventListener('submit', async (e) => {
   showLoading(['Analyzing document...','Parsing knowledge points...','Generating questions by difficulty...','Designing high-quality distractors...','Validating question quality...','Almost done...'], 2500);
   const formData = new FormData();
   formData.append('file', file); formData.append('count', $('#count').value); formData.append('difficulty', $('#difficulty').value); formData.append('types', selectedTypes); formData.append('custom_requirements', customReqs);
+  const providerId = $('#provider_id').value; if (providerId) formData.append('provider_id', providerId);
+  const modelOverride = $('#model').value; if (modelOverride) formData.append('model', modelOverride);
   try {
     const resp = await fetch('/api/generate', { method: 'POST', body: formData });
     const data = await resp.json();

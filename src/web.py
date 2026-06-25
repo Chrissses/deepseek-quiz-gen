@@ -1,4 +1,4 @@
-"""FastAPI Web 应用 —— 浏览器界面，上传文档 + 配置参数 + 生成试卷。"""
+"""FastAPI Web 应用 —— 浏览器界面，上传文档 + 配置参数 + 选择 AI 厂商 + 生成试卷。"""
 
 import json
 import tempfile
@@ -11,9 +11,9 @@ from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader
 from starlette.requests import Request
 
-from .generator import VALID_DIFFICULTIES, VALID_QUESTION_TYPES, generate_quiz
+from .generator import generate_quiz, list_available_providers
 
-app = FastAPI(title="DeepSeek Quiz Generator", version="1.0.0")
+app = FastAPI(title="DeepSeek Quiz Generator", version="1.1.0")
 
 # ── 静态文件 & 模板 ───────────────────────────────────────────────────────
 
@@ -36,6 +36,23 @@ async def index(request: Request):
 # ── API ───────────────────────────────────────────────────────────────────
 
 
+@app.get("/api/providers")
+async def api_list_providers():
+    """列出所有已配置的 AI Provider。"""
+    providers = list_available_providers()
+    return [
+        {
+            "id": p["id"],
+            "name": p["name"],
+            "type": p["type"],
+            "model": p.get("model", ""),
+            "default": p.get("default", False),
+            "has_key": bool(p.get("api_key")),
+        }
+        for p in providers
+    ]
+
+
 @app.post("/api/generate")
 async def api_generate(
     file: UploadFile = File(...),
@@ -44,6 +61,7 @@ async def api_generate(
     types: str = Form("单选题,填空题"),
     custom_requirements: str = Form(""),
     model: Optional[str] = Form(None),
+    provider_id: Optional[str] = Form(None),
 ):
     """生成试卷 API。"""
     # 读取上传文件
@@ -69,6 +87,7 @@ async def api_generate(
         source_filename=file.filename or "document.txt",
         custom_requirements=custom_requirements,
         model=model,
+        provider_id=provider_id,
     )
 
     if result.get("error"):
@@ -85,6 +104,7 @@ async def api_generate_download(
     types: str = Form("单选题,填空题"),
     custom_requirements: str = Form(""),
     model: Optional[str] = Form(None),
+    provider_id: Optional[str] = Form(None),
 ):
     """生成试卷并直接下载 JSON 文件。"""
     raw = await file.read()
@@ -103,6 +123,7 @@ async def api_generate_download(
         source_filename=file.filename or "document.txt",
         custom_requirements=custom_requirements,
         model=model,
+        provider_id=provider_id,
     )
 
     if result.get("error"):
