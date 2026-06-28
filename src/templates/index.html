@@ -586,7 +586,7 @@
       </div>
       <div class="row">
         <div class="form-group" style="flex:1;">
-          <label>🔑 API Key <span class="form-hint">fill here, skip .env</span></label>
+          <label>🔑 API Key <span class="form-hint">fill here, skip .env</span> <span style="float:right;font-size:0.7rem;cursor:pointer;color:var(--text-dim);" onclick="clearSettings()" title="Clear saved API key">✕ clear</span></label>
           <input type="password" id="api_key" name="api_key" placeholder="sk-... or leave blank to use .env">
         </div>
         <div class="form-group" style="flex:1;">
@@ -669,6 +669,20 @@ fileArea.addEventListener('drop', (e) => { e.preventDefault(); fileArea.classLis
 fileInput.addEventListener('change', () => { if (fileInput.files.length) showFileName(fileInput.files[0].name); });
 function showFileName(name) { filePlaceholder.style.display = 'none'; fileName.style.display = 'block'; fileName.textContent = '📎 ' + name; }
 
+// ── LocalStorage 持久化 ───────────────────────
+const LS_KEYS = ['api_key', 'base_url', 'model', 'provider_id'];
+function saveSettings() {
+  LS_KEYS.forEach(k => { const v = $('#' + k)?.value; if (v) localStorage.setItem('quizgen_' + k, v); });
+}
+function loadSettings() {
+  LS_KEYS.forEach(k => { const v = localStorage.getItem('quizgen_' + k); if (v) { const el = $('#' + k); if (el) el.value = v; } });
+}
+function clearSettings() {
+  LS_KEYS.forEach(k => { localStorage.removeItem('quizgen_' + k); });
+  ['#api_key', '#base_url', '#model'].forEach(id => { const el = $(id); if (el) el.value = ''; });
+  showStatus('🔓 Settings cleared', 'success');
+}
+
 // Load providers
 async function loadProviders() {
   try {
@@ -691,8 +705,16 @@ async function loadProviders() {
   } catch (err) {
     $('#provider_id').innerHTML = '<option value="">Failed to load</option>';
   }
+  // 恢复上次选择的 provider
+  const saved = localStorage.getItem('quizgen_provider_id');
+  if (saved && $('#provider_id').querySelector('option[value="' + saved + '"]')) {
+    $('#provider_id').value = saved;
+  }
 }
-document.addEventListener('DOMContentLoaded', loadProviders);
+document.addEventListener('DOMContentLoaded', () => {
+  loadSettings();
+  loadProviders();
+});
 
 // Type select all
 function toggleAllTypes() { const all = document.querySelectorAll('input[name="qtype"]'); const ac = Array.from(all).every(cb => cb.checked); all.forEach(cb => { cb.checked = !ac; }); document.getElementById('select-all-types').checked = !ac; }
@@ -722,6 +744,7 @@ $('#quiz-form').addEventListener('submit', async (e) => {
   const modelOverride = $('#model').value; if (modelOverride) formData.append('model', modelOverride);
   const apiKey = $('#api_key').value; if (apiKey) formData.append('api_key', apiKey);
   const baseUrl = $('#base_url').value; if (baseUrl) formData.append('base_url', baseUrl);
+  saveSettings();  // 记住配置
   try {
     const resp = await fetch('/api/generate', { method: 'POST', body: formData });
     const data = await resp.json();
