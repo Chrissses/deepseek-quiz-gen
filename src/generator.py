@@ -231,13 +231,24 @@ def generate_quiz(
 
     # 2. 解析 Provider（优先使用直接传入的 api_key）
     if api_key:
+        # 如果同时选了 provider，继承其 base_url / model
+        _base_url = base_url
+        _model = model
+        if provider_id and (not base_url or not model):
+            for p in load_providers():
+                if p["id"] == provider_id:
+                    if not _base_url:
+                        _base_url = p.get("base_url", "")
+                    if not _model:
+                        _model = p.get("model", "")
+                    break
         provider_config = {
             "id": "custom",
             "name": "Custom",
             "type": "openai_compatible",
             "api_key": api_key,
-            "base_url": base_url or "https://api.openai.com/v1",
-            "model": model or "gpt-4o",
+            "base_url": _base_url or "https://api.openai.com/v1",
+            "model": _model or "gpt-4o",
         }
     else:
         try:
@@ -278,11 +289,15 @@ def generate_quiz(
         print("---")
 
     except Exception as e:
+        err_msg = str(e)
+        hint = "请检查 API Key 是否正确，以及 Base URL 是否匹配所选厂商。"
+        if "401" in err_msg or "invalid_api_key" in err_msg:
+            hint = "API Key 无效或已过期。请确认：1) Key 正确 2) 所选厂商与 Key 匹配（如 OpenAI key 应选 OpenAI 厂商）"
         return {
             "error": True,
             "message": f"AI 调用失败 [{provider_config['id']}]: {e}",
             "error_type": "api_error",
-            "suggestion": "请检查 API Key 与网络连接，或切换其他 Provider。",
+            "suggestion": hint,
         }
 
     # 4. 解析 JSON
