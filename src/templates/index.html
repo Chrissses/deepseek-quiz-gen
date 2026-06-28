@@ -796,7 +796,7 @@ function renderResult(data) {
       const it = q.type === '单选题' ? 'radio' : 'checkbox';
       html += '<div class="q-options">';
       for (const [k, v] of Object.entries(q.options)) {
-        html += '<label class="q-option q-option-clickable" data-q="' + qIdx + '" data-key="' + esc(k) + '"><input type="' + it + '" name="q' + qIdx + '" value="' + esc(k) + '" onchange="onAnswerChange(' + qIdx + ')"><span class="q-opt-label">' + esc(v) + '</span></label>';
+        html += '<label class="q-option q-option-clickable" data-q="' + qIdx + '" data-key="' + esc(k) + '"><input type="' + it + '" name="q' + qIdx + '" value="' + esc(k) + '" onchange="onAnswerChange(' + qIdx + ')"><span class="q-opt-label"><strong>' + esc(k) + '.</strong> ' + esc(v) + '</span></label>';
       }
       html += '</div>';
     } else if (q.type === '填空题') {
@@ -871,8 +871,8 @@ function esc(s) { if (s==null) return ''; return String(s).replace(/&/g,'&amp;')
 function fullAnswer(q) {
   const ca = q.correct_answer || '';
   if (!q.options) return ca;
-  if (q.type === '单选题') return (q.options[ca] || ca);
-  if (q.type === '多选题') return ca.split(',').map(k => k.trim()).filter(k => q.options[k]).map(k => q.options[k]).join('；');
+  if (q.type === '单选题') return (q.options[ca] ? ca + '. ' + q.options[ca] : ca);
+  if (q.type === '多选题') return ca.split(',').map(k => k.trim()).filter(k => q.options[k]).map(k => k + '. ' + q.options[k]).join('；');
   return ca;
 }
 function hideResult() { $('#result-card').classList.add('result-hidden'); $('#result-card').classList.remove('result-visible'); }
