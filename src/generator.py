@@ -277,6 +277,8 @@ def generate_quiz(
     provider = create_provider(provider_config)
     effective_model = model or provider_config.get("model", "")
 
+    print(f"[DEBUG] Language: {language} | Model: {effective_model} | Provider: {provider_config['id']}")
+
     try:
         raw_content = provider.generate(
             messages=messages,
