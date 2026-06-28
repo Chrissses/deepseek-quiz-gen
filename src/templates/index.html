@@ -774,7 +774,7 @@ function renderResult(data) {
       const it = q.type === '单选题' ? 'radio' : 'checkbox';
       html += '<div class="q-options">';
       for (const [k, v] of Object.entries(q.options)) {
-        html += '<label class="q-option q-option-clickable" data-q="' + qIdx + '" data-key="' + esc(k) + '"><input type="' + it + '" name="q' + qIdx + '" value="' + esc(k) + '" onchange="onAnswerChange(' + qIdx + ')"><span class="q-opt-label"><strong>' + esc(k) + '.</strong> ' + esc(stripOptionPrefix(k, v)) + '</span></label>';
+        html += '<label class="q-option q-option-clickable" data-q="' + qIdx + '" data-key="' + esc(k) + '"><input type="' + it + '" name="q' + qIdx + '" value="' + esc(k) + '" onchange="onAnswerChange(' + qIdx + ')"><span class="q-opt-label"><strong>' + esc(k) + '.</strong> ' + esc(v) + '</span></label>';
       }
       html += '</div>';
     } else if (q.type === '填空题') {
@@ -846,7 +846,6 @@ function submitQuiz() {
 
 // Helpers
 function esc(s) { if (s==null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function stripOptionPrefix(k, v) { const re = new RegExp('^' + k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '[.、．)）]\\s*'); return v.replace(re, ''); }
 function hideResult() { $('#result-card').classList.add('result-hidden'); $('#result-card').classList.remove('result-visible'); }
 function toggleView(mode) { $('#rendered-view').style.display = (mode==='rendered')?'block':'none'; $('#raw-view').style.display = (mode==='raw')?'block':'none'; }
 function showStatus(m,c) { const e = $('#status'); e.textContent = m; e.className = 'status ' + (c||''); }
